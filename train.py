@@ -27,11 +27,11 @@ import numpy as np
 CONFIG = {
     "data_dir"      : "data",          # folder with train/ val/ subfolders
     "model_save"    : "models/road_classifier.pth",
-    "batch_size"    : 20,              # keep low for CPU
+    "batch_size"    : 16,              # keep low for CPU
     "num_epochs"    : 20,
     "learning_rate" : 0.001,
     "image_size"    : 224,
-    "num_workers"   : 2,              # CPU data loading threads
+    "num_workers"   : 4,              # CPU data loading threads
     "freeze_layers" : True,           # True = only train classifier head (FAST)
 }
 
@@ -45,6 +45,7 @@ def get_transforms(image_size):
         transforms.RandomHorizontalFlip(),
         transforms.RandomRotation(10),
         transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
+        transforms.RandomGrayscale(p=0.1),
         transforms.ToTensor(),
         transforms.Normalize([0.485, 0.456, 0.406],
                              [0.229, 0.224, 0.225]),
@@ -87,7 +88,7 @@ def build_model(freeze_layers=True):
 # ─────────────────────────────────────────────
 #  TRAINING LOOP
 # ─────────────────────────────────────────────
-def train_model(model, dataloaders, criterion, optimizer, num_epochs, device):
+def train_model(model, dataloaders, criterion, optimizer, scheduler, num_epochs, device):
     best_model_wts = copy.deepcopy(model.state_dict())
     best_acc = 0.0
     history = {"train_loss": [], "val_loss": [], "train_acc": [], "val_acc": []}
@@ -144,6 +145,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs, device):
                 best_acc = epoch_acc
                 best_model_wts = copy.deepcopy(model.state_dict())
 
+        scheduler.step()
         print()
 
     elapsed = time.time() - start_time
@@ -233,9 +235,11 @@ def main():
         lr=CONFIG["learning_rate"]
     )
 
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=4, gamma=0.5)
+
     # ── Train ─────────────────────────────────
     model, history = train_model(
-        model, dataloaders, criterion, optimizer,
+        model, dataloaders, criterion, optimizer, scheduler,
         CONFIG["num_epochs"], device
     )
 
