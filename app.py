@@ -70,7 +70,8 @@ def classify(image):
 
 
 # ─── Gradio UI ────────────────────────────────────────────
-with gr.Blocks(title="Road Classifier", theme=gr.themes.Soft()) as demo:
+# FIX 1: theme removed from gr.Blocks() — Gradio 6.0 moved it to launch()
+with gr.Blocks(title="Road Classifier") as demo:
     gr.Markdown("""
     # 🛣️ Road Image Classifier
     **Upload any image to check if it contains a road.**
@@ -93,4 +94,9 @@ with gr.Blocks(title="Road Classifier", theme=gr.themes.Soft()) as demo:
     """)
 
 if __name__ == "__main__":
-    demo.launch(share=False, inbrowser=True)
+    demo.launch(
+        server_name="0.0.0.0",   # FIX 2: binds to all interfaces, not just 127.0.0.1
+        server_port=7860,
+        share=False,
+        inbrowser=False,          # FIX 3: no browser popup on server
+    )
